@@ -33,7 +33,7 @@ Gizmo {
  mapsize {0.15 0.15}
  addUserKnob {
     20 tank_tab
-    l "Flow Production Tracking Write Geo"
+    l "Write Geo"
  }
  addUserKnob {
     4 tk_profile_list
@@ -180,34 +180,17 @@ Gizmo {
     T WriteGeo1.file_type
  }
  addUserKnob {
-    41 frame_mode
-    l frame
-    T WriteGeo1.frame_mode
- }
- addUserKnob {
-    41 frame
-    l ""
-    T WriteGeo1.frame
-    -STARTLINE
- }
- addUserKnob {
     41 views
     T WriteGeo1.views
  }
-
  addUserKnob {
     26 ""
     l ""
     +STARTLINE
  }
  addUserKnob {
-    41 render_order
-    l "render order"
-    T WriteGeo1.render_order
- }
- addUserKnob {
-    41 Render
-    T WriteGeo1.Render
+    41 Execute
+    T WriteGeo1.Execute
     -STARTLINE
  }
  addUserKnob {
@@ -227,30 +210,6 @@ Gizmo {
     T WriteGeo1.use_limit
     -STARTLINE
  }
-
- addUserKnob {
-    41 reading
-    l "read file"
-    T WriteGeo1.reading
- }
- addUserKnob {
-    41 checkHashOnRead
-    l ""
-    T WriteGeo1.checkHashOnRead
-    +INVISIBLE
- }
- addUserKnob {
-    41 on_error
-    l "missing frames"
-    T WriteGeo1.on_error
- }
- addUserKnob {
-    41 reload
-    l Reload
-    T WriteGeo1.reload
-    -STARTLINE
- }
-
  addUserKnob {
     26 ""
     l ""
@@ -383,16 +342,9 @@ Gizmo {
   xpos 195
   ypos -34
  }
-set N11879e50 [stack 0]
  Output {
   name Output1
   xpos 195
   ypos 66
  }
-push $N11879e50
- Reformat {
-  type "to box"
-  box_width 800
-  box_height 1
-  black_outside true
-  name Reformat1
+end_group
