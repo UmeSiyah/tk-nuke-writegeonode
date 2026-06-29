@@ -161,31 +161,6 @@ class NukeWriteGeoNode(tank.platform.Application):
         """
         return self.__write_node_handler.get_publish_template(node)
 
-    # access proxy-res render information:
-    def get_node_proxy_render_path(self, node):
-        """
-        Return the render path for the specified node
-        """
-        return self.__write_node_handler.compute_proxy_path(node)
-
-    def get_node_proxy_render_files(self, node):
-        """
-        Return the list of rendered files for the node
-        """
-        return self.__write_node_handler.get_proxy_files_on_disk(node)
-
-    def get_node_proxy_render_template(self, node):
-        """
-        Return the render template for the specified node
-        """
-        return self.__write_node_handler.get_proxy_render_template(node)
-
-    def get_node_proxy_publish_template(self, node):
-        """
-        Return the publish template for the specified node
-        """
-        return self.__write_node_handler.get_proxy_publish_template(node)
-
     # useful utility functions:
     def generate_node_thumbnail(self, node):
         """

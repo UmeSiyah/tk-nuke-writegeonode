@@ -28,12 +28,7 @@ configuration:
                      of the workflow. These templates need to include the 'version' field
                      and can optionally include the fields 'name' and 'output'
                      (which reflect the geometry output name) and 'pf_element_name' and 'pf_element_variant'
-                     for published file element tracking.
-                     Finally, you need the templates 'proxy_render_template'
-                     and 'proxy_publish_template' these have the same requirements as the regular
-                     render and pubish templates but are used when rendering in proxy mode.  If
-                     these are missing (set to null) then the regular templates will be used
-                     instead."
+                     for published file element tracking."
         allows_empty: True
         values:
             type: dict

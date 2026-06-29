@@ -87,24 +87,6 @@ Gizmo {
     +INVISIBLE
  }
  addUserKnob {
-    1 proxy_render_template
-    l "Sgtk Proxy Render Template"
-    t "The Sgtk render template associated with this node when rendering in proxy mode"
-    +INVISIBLE
- }
- addUserKnob {
-    1 proxy_publish_template
-    l "Sgtk Proxy Publish Template"
-    t "The Sgtk publish template associated with this node for proxy renders"
-    +INVISIBLE
- }
- addUserKnob {
-    1 tk_cached_proxy_path
-    l "Sgtk Cached Proxy Path"
-    t "The path for this write geo node when rendering in proxy mode"
-    +INVISIBLE
- }
- addUserKnob {
     1 tk_last_known_script
     l "Last Known Script"
     t "The last known script this WriteGeo node was saved in - used to determine if the script is being saved as a new file or not"
@@ -133,12 +115,6 @@ Gizmo {
     26 ""
     l ""
     +STARTLINE
- }
- addUserKnob {
-    26 tk_render_mode
-    l "  "
-    T "<i style='color:gold'>[Proxy Mode]<i>"
-    t ""
  }
  addUserKnob {
     26 path_context
@@ -190,7 +166,7 @@ Gizmo {
     22 tk_copy_path
     l "Copy Path to Clipboard"
     T "import nuke\nif hasattr(nuke, \"_shotgun_writegeo_node_handler\"):\n    nuke._shotgun_writegeo_node_handler.on_copy_path_to_clipboard_gizmo_callback()"
-    t "Copies the current render/proxy path to the clipboard"
+    t "Copies the current render path to the clipboard"
     -STARTLINE
  }
 
@@ -222,13 +198,6 @@ Gizmo {
  addUserKnob {
     26 ""
     l ""
-    +STARTLINE
- }
- addUserKnob {
-    26 tk_render_warning
-    l " "
-    T "<i style='color:orange'>Warning<i>"
-    t ""
     +STARTLINE
  }
  addUserKnob {
@@ -408,7 +377,6 @@ Gizmo {
  }
  WriteGeo {
   file  "\[python __import__('nuke')._shotgun_writegeo_node_handler.on_compute_path_gizmo_callback() if hasattr(__import__('nuke'), '_shotgun_writegeo_node_handler') else nuke.thisParent().knob('cached_path').value()]"
-  proxy "\[python __import__('nuke')._shotgun_writegeo_node_handler.on_compute_proxy_path_gizmo_callback() if hasattr(__import__('nuke'), '_shotgun_writegeo_node_handler') else nuke.thisParent().knob('tk_cached_proxy_path').value()]"
   beforeRender "import nuke\nif hasattr(nuke, \"_shotgun_writegeo_node_handler\"):\n    nuke._shotgun_writegeo_node_handler.on_before_render_gizmo_callback()"
   afterRender "import nuke\nif hasattr(nuke, \"_shotgun_writegeo_node_handler\"):\n    nuke._shotgun_writegeo_node_handler.on_after_render_gizmo_callback()"
   name WriteGeo1
@@ -428,14 +396,3 @@ push $N11879e50
   box_height 1
   black_outside true
   name Reformat1
-  xpos 249
-  ypos 16
- }
- Write {
-  file_type png
-  name create_thumbnail
-  xpos 362
-  ypos 27
-  disable true
- }
-end_group

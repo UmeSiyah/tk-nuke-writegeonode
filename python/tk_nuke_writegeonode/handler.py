@@ -58,9 +58,8 @@ class TankWriteNodeHandler(object):
         self.__currently_rendering_nodes = set()
         self.__node_computed_path_settings_cache = {}
         self.__path_preview_cache = {}
-        # flags to track when the render and proxy paths are being updated.
+        # flags to track when the render path is being updated.
         self.__is_updating_render_path = False
-        self.__is_updating_proxy_path = False
 
         self.populate_profiles_from_settings()
 
@@ -147,32 +146,13 @@ class TankWriteNodeHandler(object):
         """
         return self.__get_publish_template(node)
 
-    def get_proxy_render_template(self, node):
-        """
-        helper function. Returns the associated render proxy template obj for a node.
-        If this hasn't been defined then it falls back to the regular render template.
-        """
-        return self.__get_render_template(node, is_proxy=True, fallback_to_render=True)
-
-    def get_proxy_publish_template(self, node):
-        """
-        helper function. Returns the associated pub template obj for a node
-        """
-        return self.__get_publish_template(node, True) or self.__get_publish_template(
-            node, False
-        )
-
     def compute_render_path(self, node):
         """
         Public method to compute and return the render path
         """
-        return self.__compute_render_path(node, is_proxy=False)
-
-    def compute_proxy_path(self, node):
-        """
-        Public method to compute and return the proxy render path
-        """
-        return self.__compute_render_path(node, is_proxy=True)
+        return self.__compute_render_path(
+            node,
+        )
 
     def get_files_on_disk(self, node):
         """
@@ -180,13 +160,6 @@ class TankWriteNodeHandler(object):
         Returns the files on disk associated with this node
         """
         return self.__get_files_on_disk(node, False)
-
-    def get_proxy_files_on_disk(self, node):
-        """
-        Called from render publisher & UI (via exists_on_disk)
-        Returns the files on disk associated with this node
-        """
-        return self.__get_files_on_disk(node, True)
 
     def render_path_is_locked(self, node):
         """
@@ -212,9 +185,7 @@ class TankWriteNodeHandler(object):
         will force the render path to be updated based on
         the current script path and configuration.
         """
-        # WriteGeo nodes don't have proxy mode, so force is_proxy=False
-        is_proxy = False
-        self.__update_render_path(node, force_reset=True, is_proxy=is_proxy)
+        self.__update_render_path(node, force_reset=True)
 
     def create_new_node(self, profile_name):
         """
@@ -320,7 +291,6 @@ class TankWriteNodeHandler(object):
 
         # set render output - make sure to use a path with slashes on all OSes
         th_node.knob("file").setValue(png_path.replace(os.path.sep, "/"))
-        th_node.knob("proxy").setValue(png_path.replace(os.path.sep, "/"))
 
         # and finally render!
         try:
@@ -350,7 +320,6 @@ class TankWriteNodeHandler(object):
         finally:
             # reset paths
             th_node.knob("file").setValue("")
-            th_node.knob("proxy").setValue("")
             th_node.knob("disable").setValue(True)
 
         return png_path
@@ -398,7 +367,7 @@ class TankWriteNodeHandler(object):
         # Convert Shotgun write geo nodes to Nuke WriteGeo nodes:
         app.convert_to_write_nodes()
 
-        :param create_folders: When set to true, it will create the folders on disk for the render and proxy paths.
+        :param create_folders: When set to true, it will create the folders on disk for the render paths.
          Defaults to false.
         """
         # clear current selection:
@@ -416,12 +385,8 @@ class TankWriteNodeHandler(object):
             new_wn = nuke.createNode("WriteGeo")
             new_wn.setSelected(False)
 
-            # copy across file & proxy knobs (if we've defined a proxy template):
+            # copy across file knobs:
             new_wn["file"].setValue(sg_wn["cached_path"].evaluate())
-            if sg_wn["proxy_render_template"].value():
-                new_wn["proxy"].setValue(sg_wn["tk_cached_proxy_path"].evaluate())
-            else:
-                new_wn["proxy"].setValue("")
 
             # make sure file_type is set properly:
             int_wn = sg_wn.node(TankWriteNodeHandler.WRITE_NODE_NAME)
@@ -433,7 +398,6 @@ class TankWriteNodeHandler(object):
                 if knob_name in [
                     "file_type",
                     "file",
-                    "proxy",
                     "beforeRender",
                     "afterRender",
                     "name",
@@ -486,14 +450,6 @@ class TankWriteNodeHandler(object):
             knob.setValue(sg_wn["publish_template"].value())
             new_wn.addKnob(knob)
 
-            knob = nuke.String_Knob("tk_proxy_render_template")
-            knob.setValue(sg_wn["proxy_render_template"].value())
-            new_wn.addKnob(knob)
-
-            knob = nuke.String_Knob("tk_proxy_publish_template")
-            knob.setValue(sg_wn["proxy_publish_template"].value())
-            new_wn.addKnob(knob)
-
             # delete original node:
             nuke.delete(sg_wn)
 
@@ -532,8 +488,6 @@ class TankWriteNodeHandler(object):
             )
             render_template_knob = wn.knob("tk_render_template")
             publish_template_knob = wn.knob("tk_publish_template")
-            proxy_render_template_knob = wn.knob("tk_proxy_render_template")
-            proxy_publish_template_knob = wn.knob("tk_proxy_publish_template")
 
             if (
                 not profile_knob
@@ -541,8 +495,6 @@ class TankWriteNodeHandler(object):
                 or not use_name_as_output_knob
                 or not render_template_knob
                 or not publish_template_knob
-                or not proxy_render_template_knob
-                or not proxy_publish_template_knob
             ):
                 # can't convert to a Shotgun WriteGeo Node as we have missing parameters!
                 continue
@@ -556,17 +508,10 @@ class TankWriteNodeHandler(object):
             new_sg_wn = nuke.createNode(TankWriteNodeHandler.SG_WRITE_NODE_CLASS)
             new_sg_wn.setSelected(False)
 
-            # copy across file & proxy knobs as well as all cached templates:
+            # copy across file knobs and cached templates:
             new_sg_wn["cached_path"].setValue(wn["file"].value())
-            new_sg_wn["tk_cached_proxy_path"].setValue(wn["proxy"].value())
             new_sg_wn["render_template"].setValue(render_template_knob.value())
             new_sg_wn["publish_template"].setValue(publish_template_knob.value())
-            new_sg_wn["proxy_render_template"].setValue(
-                proxy_render_template_knob.value()
-            )
-            new_sg_wn["proxy_publish_template"].setValue(
-                proxy_publish_template_knob.value()
-            )
 
             # set the profile & output - this will cause the paths to be reset:
             # Note, we don't call the method __set_profile() as we don't want to
@@ -593,7 +538,6 @@ class TankWriteNodeHandler(object):
                 if knob_name in [
                     "file_type",
                     "file",
-                    "proxy",
                     "beforeRender",
                     "afterRender",
                     "name",
@@ -667,25 +611,9 @@ class TankWriteNodeHandler(object):
             return
 
         # return the render path but don't reset it:
-        path = self.__update_render_path(node, is_proxy=False)
-        return path
-
-    def on_compute_proxy_path_gizmo_callback(self):
-        """
-        Callback executed when nuke requests the location of the std output to be computed on the internal Write
-        node.  Returns a path on disk. This will return the path in a form that Nuke likes (eg. with slashes).
-        """
-        # the Flow Production Tracking Write node is the current node's parent:
-        node = nuke.thisParent()
-        if not node:
-            return
-
-        # don't do anything until the node is fully constructed!
-        if not self.__is_node_fully_constructed(node):
-            return
-
-        # return the render path but don't reset it:
-        path = self.__update_render_path(node, is_proxy=True)
+        path = self.__update_render_path(
+            node,
+        )
         return path
 
     def on_show_in_fs_gizmo_callback(self):
@@ -701,8 +629,8 @@ class TankWriteNodeHandler(object):
         render_dir = None
 
         # first, try to just use the current cached path:
-        is_proxy = node.proxy()
-        render_path = self.__get_render_path(node, is_proxy)
+
+        render_path = self.__get_render_path(node)
         if render_path:
             # the above method returns nuke style slashes, so ensure these
             # are pointing correctly
@@ -721,8 +649,7 @@ class TankWriteNodeHandler(object):
                     nuke.message(
                         "There are no %srenders for this node yet!\n"
                         "When you render, the files will be written to "
-                        "the following location:\n\n%s"
-                        % (("proxy " if is_proxy else ""), render_path)
+                        "the following location:\n\n%s" % render_path
                     )
                 else:
                     render_dir = os.path.dirname(files[0])
@@ -763,9 +690,8 @@ class TankWriteNodeHandler(object):
         """
         node = nuke.thisNode()
 
-        # get the path depending if in full or proxy mode:
-        is_proxy = node.proxy()
-        render_path = self.__get_render_path(node, is_proxy)
+        # get the render path:
+        render_path = self.__get_render_path(node)
 
         # use Qt to copy the path to the clipboard:
         from sgtk.platform.qt import QtGui
@@ -784,25 +710,14 @@ class TankWriteNodeHandler(object):
         views = node.knob("views").value().split()
 
         if len(views) < 2:
-            # check if proxy render or not
-            if nuke.root()["proxy"].value():
-                # proxy mode
-                out_file = node.knob("proxy").evaluate()
-            else:
-                out_file = node.knob("file").evaluate()
-
+            out_file = node.knob("file").evaluate()
             out_dir = os.path.dirname(out_file)
             self._app.ensure_folder_exists(out_dir)
 
         else:
             # stereo or odd number of views...
             for view in views:
-                if nuke.root()["proxy"].value():
-                    # proxy mode
-                    out_file = node.knob("proxy").evaluate(view=view)
-                else:
-                    out_file = node.knob("file").evaluate(view=view)
-
+                out_file = node.knob("file").evaluate(view=view)
                 out_dir = os.path.dirname(out_file)
                 self._app.ensure_folder_exists(out_dir)
 
@@ -882,46 +797,27 @@ class TankWriteNodeHandler(object):
 
         return self._app.get_template_by_name(template_name)
 
-    def __get_render_template(self, node, is_proxy=False, fallback_to_render=False):
+    def __get_render_template(self, node):
         """
-        Get a specific render template for the current profile
-
-        :param is_proxy:            Specifies which of the two
-        :param fallback_to_render:  If true and proxy template is null then the
-                                    render template will be returned instead.
+        Get the render template for the current profile
         """
-        if is_proxy:
-            template = self.__get_template(node, "proxy_render_template")
-            if template or not fallback_to_render:
-                return template
-
         return self.__get_template(node, "render_template")
 
-    def __get_publish_template(self, node, is_proxy=False):
+    def __get_publish_template(self, node):
         """
-        Get a specific publish template for the current profile
+        Get the publish template for the current profile
         """
-        if is_proxy:
-            return self.__get_template(node, "proxy_publish_template")
-        else:
-            return self.__get_template(node, "publish_template")
+        return self.__get_template(node, "publish_template")
 
     def __is_output_used(self, node):
         """
-        Determine if output key is used in either the render or the proxy render
-        templates
+        Determine if output key is used in the render template
         """
-        render_template = self.__get_render_template(node, is_proxy=False)
-        proxy_render_template = self.__get_render_template(node, is_proxy=True)
-
-        for template in [render_template, proxy_render_template]:
-            if not template:
-                continue
-            # check for output key and also channel for backwards compatibility!
-            if "output" in template.keys or "channel" in template.keys:
-                return True
-
-        return False
+        render_template = self.__get_render_template(node)
+        if not render_template:
+            return False
+        # check for output key and also channel for backwards compatibility!
+        return "output" in render_template.keys or "channel" in render_template.keys
 
     def __update_knob_value(self, node, name, new_value):
         """
@@ -950,7 +846,7 @@ class TankWriteNodeHandler(object):
         output_knob.setVisible(output_is_used)
         name_as_output_knob.setVisible(output_is_used)
 
-    def __update_path_preview(self, node, is_proxy):
+    def __update_path_preview(self, node):
         """
         Updates the path preview fields on the tank write node.
         """
@@ -962,7 +858,7 @@ class TankWriteNodeHandler(object):
         self.__update_knob_value(node, "label", label)
 
         # get the render path:
-        path = self.__get_render_path(node, is_proxy)
+        path = self.__get_render_path(node)
 
         # calculate the parts:
         context_path = local_path = file_name = ""
@@ -1095,12 +991,7 @@ class TankWriteNodeHandler(object):
         # pull settings from profile:
         render_template = self._app.get_template_by_name(profile["render_template"])
         publish_template = self._app.get_template_by_name(profile["publish_template"])
-        proxy_render_template = self._app.get_template_by_name(
-            profile["proxy_render_template"]
-        )
-        proxy_publish_template = self._app.get_template_by_name(
-            profile["proxy_publish_template"]
-        )
+
         file_type = profile["file_type"]
         file_settings = profile["settings"]
         tile_color = profile["tile_color"]
@@ -1180,16 +1071,6 @@ class TankWriteNodeHandler(object):
         # write the template name to the node so that we know it later
         self.__update_knob_value(node, "render_template", render_template.name)
         self.__update_knob_value(node, "publish_template", publish_template.name)
-        self.__update_knob_value(
-            node,
-            "proxy_render_template",
-            proxy_render_template.name if proxy_render_template else "",
-        )
-        self.__update_knob_value(
-            node,
-            "proxy_publish_template",
-            proxy_publish_template.name if proxy_publish_template else "",
-        )
 
         # If a node's tile_color was defined in the profile then set it:
         if not tile_color or len(tile_color) != 3:
@@ -1377,7 +1258,7 @@ class TankWriteNodeHandler(object):
                 #
                 # ['',
                 #  'file /some/path/to/an/image.exr',
-                #  'proxy /some/path/to/an/image.exr',
+                #
                 #  'file_type exr',
                 #  'datatype "32 bit float"',
                 #  'beforeRender "<beforeRender callback script>"',
@@ -1440,7 +1321,7 @@ class TankWriteNodeHandler(object):
             lines.append(this_line)
         return lines
 
-    def __update_render_path(self, node, force_reset=False, is_proxy=False):
+    def __update_render_path(self, node, force_reset=False):
         """
         Update the render path and the various feedback knobs based on the current
         context and other node settings.
@@ -1448,39 +1329,29 @@ class TankWriteNodeHandler(object):
         :param node:        The Flow Production Tracking Write node to update the path for
         :param force_reset: Force the path to be reset regardless of any cached
                             values
-        :param is_proxy:    If True then update the proxy render path, otherwise
-                            just update the normal render path.
+
+                            .
         :returns:           The updated render path
         """
         try:
             # get the cached path without evaluating:
-            cached_path = (
-                node.knob("tk_cached_proxy_path").toScript()
-                if is_proxy
-                else node.knob("cached_path").toScript()
-            )
+            cached_path = node.knob("cached_path").toScript()
 
             if node in self.__currently_rendering_nodes:
                 # when rendering we don't want to re-evaluate the paths as doing
                 # so can cause problems!  Specifically, I found that accessing
                 # width, height or format on a node can cause the evaluation
-                # of the internal Write node file/proxy to not be evaluated!!
+                # of the internal Write node file to not be evaluated!!
                 return cached_path
 
             # it seems that querying certain things (e.g. node.width()) will sometimes cause the render
-            # and proxy paths to be re-evaluated causing this function to be called recursively which
+            #  causing this function to be called recursively which
             # can break things!  In case that happens we use some flags to track it so that the path
             # only gets updated once.
-            if is_proxy:
-                if self.__is_updating_proxy_path:
-                    return cached_path
-                else:
-                    self.__is_updating_proxy_path = True
+            if self.__is_updating_render_path:
+                return cached_path
             else:
-                if self.__is_updating_render_path:
-                    return cached_path
-                else:
-                    self.__is_updating_render_path = True
+                self.__is_updating_render_path = True
 
             # get the current script path:
             script_path = self.__get_current_script_path()
@@ -1496,11 +1367,11 @@ class TankWriteNodeHandler(object):
                     width,
                     height,
                     output_name,
-                ) = self.__gather_render_settings(node, is_proxy)
+                ) = self.__gather_render_settings(node)
 
                 # experimental settings cache to avoid re-computing the path if nothing has changed...
                 cache_item = self.__node_computed_path_settings_cache.get(
-                    (node, is_proxy), (None, "", "")
+                    (node), (None, "", "")
                 )
                 old_cache_entry, compute_path_error, render_path = cache_item
                 cache_entry = {
@@ -1528,7 +1399,7 @@ class TankWriteNodeHandler(object):
 
             except TkComputePathError as e:
                 # update cache:
-                self.__node_computed_path_settings_cache[(node, is_proxy)] = (
+                self.__node_computed_path_settings_cache[(node)] = (
                     cache_entry,
                     str(e),
                     "",
@@ -1567,7 +1438,7 @@ class TankWriteNodeHandler(object):
                 render_path = cached_path
             else:
                 # update cache:
-                self.__node_computed_path_settings_cache[(node, is_proxy)] = (
+                self.__node_computed_path_settings_cache[(node)] = (
                     cache_entry,
                     "",
                     render_path,
@@ -1579,7 +1450,7 @@ class TankWriteNodeHandler(object):
                     # to see if it is locked.  A path is considered locked if the render path differs
                     # from the cached path ignoring certain dynamic fields (e.g. width, height).
                     path_is_locked = self.__is_render_path_locked(
-                        node, render_path, cached_path, is_proxy
+                        node, render_path, cached_path
                     )
 
                 if path_is_locked:
@@ -1609,7 +1480,7 @@ class TankWriteNodeHandler(object):
                 if not path_is_locked or not cached_path:
                     self.__update_knob_value(
                         node,
-                        "tk_cached_proxy_path" if is_proxy else "cached_path",
+                        "cached_path",
                         render_path,
                     )
 
@@ -1620,10 +1491,7 @@ class TankWriteNodeHandler(object):
                 if force_reset or not last_known_script_knob.value():
                     last_known_script_knob.setValue(script_path)
 
-            # Note that this method can get called to update the proxy render path when the node
-            # isn't in proxy mode!  Because we only want to update the UI to represent the 'actual'
-            # state then we check for that here:
-            if is_proxy == node.proxy():
+                # Update the UI to represent the current state:
                 # update warning displayed to the user:
                 if path_warning:
                     path_warning = (
@@ -1636,78 +1504,40 @@ class TankWriteNodeHandler(object):
                     self.__update_knob_value(node, "path_warning", "")
                     node.knob("path_warning").setVisible(False)
                 node.knob("reset_path").setVisible(reset_path_button_visible)
-
-                # show/hide proxy mode label depending if we're currently
-                # rendering in proxy mode:
-                node.knob("tk_render_mode").setVisible(is_proxy)
-
                 # update the render warning label if needed:
-                render_warning = ""
-                if is_proxy:
-                    full_render_path = self.__get_render_path(node, False)
-                    if full_render_path == render_path:
-                        render_warning = (
-                            "The full & proxy resolution render paths are currently the same.  "
-                            "Rendering in proxy mode will overwrite any previously rendered "
-                            "full-res frames!"
-                        )
-                if render_warning:
-                    self.__update_knob_value(
-                        node,
-                        "tk_render_warning",
-                        "<i style='color:orange'><b>Warning</b> <br>%s<i><br>"
-                        % "<br>".join(self.__wrap_text(render_warning, 60)),
-                    )
-                    node.knob("tk_render_warning").setVisible(True)
-                else:
-                    self.__update_knob_value(node, "tk_render_warning", "")
-                    node.knob("tk_render_warning").setVisible(False)
-
-                # update output knobs:
                 self.__update_output_knobs(node)
 
                 # finally, update preview:
-                self.__update_path_preview(node, is_proxy)
+                self.__update_path_preview(node)
 
             return render_path
 
         finally:
             # make sure we reset the update flag
-            if is_proxy:
-                self.__is_updating_proxy_path = False
-            else:
-                self.__is_updating_render_path = False
+            self.__is_updating_render_path = False
 
-    def __get_render_path(self, node, is_proxy=False):
+    def __get_render_path(self, node):
         """
         Return the currently cached path for the specified node.  This will calculate the path
         if it's not previously been cached.
         """
-        path = ""
-
-        # get the cached path to return:
-        if is_proxy:
-            path = node.knob("tk_cached_proxy_path").toScript()
-        else:
-            path = node.knob("cached_path").toScript()
-
+        path = node.knob("cached_path").toScript()
         if not path:
             # never been cached so compute instead:
             try:
-                path = self.__compute_render_path(node, is_proxy)
+                path = self.__compute_render_path(node)
             except TkComputePathError:
                 # ignore
                 pass
-
         return path
 
-    def __get_files_on_disk(self, node, is_proxy=False):
+    def __get_files_on_disk(self, node):
         """
         Called from render publisher & UI (via exists_on_disk)
         Returns the files on disk associated with this node
         """
-        file_name = self.__get_render_path(node, is_proxy)
-        template = self.__get_render_template(node, is_proxy, fallback_to_render=True)
+        file_name = self.__get_render_path(node)
+        template = self.__get_render_template(node)
 
         if not template.validate(file_name):
             raise Exception(
@@ -1723,16 +1553,15 @@ class TankWriteNodeHandler(object):
 
         return frames
 
-    def __gather_render_settings(self, node, is_proxy=False):
+    def __gather_render_settings(self, node):
         """
         Gather the render template, width, height and output name required
         to compute the render path for the specified node.
 
         :param node:         The current Flow Production Tracking WriteGeo node
-        :param is_proxy:     If True then compute the proxy path, otherwise compute the standard render path
         :returns:            Tuple containing (render template, width, height, output name)
         """
-        render_template = self.__get_render_template(node, is_proxy)
+        render_template = self.__get_render_template(node)
         # 3D geometry exports have no resolution
         width = height = 0
         output_name = ""
@@ -1744,18 +1573,17 @@ class TankWriteNodeHandler(object):
 
         return (render_template, width, height, output_name)
 
-    def __compute_render_path(self, node, is_proxy=False):
+    def __compute_render_path(self, node):
         """
         Computes the render path for a node.
 
         :param node:         The current Flow Production Tracking Write node
-        :param is_proxy:     If True then compute the proxy path, otherwise compute the standard render path
         :returns:            The computed render path
         """
 
         # gather the render settings to use:
         render_template, width, height, output_name = self.__gather_render_settings(
-            node, is_proxy
+            node
         )
 
         # compute the render path:
@@ -1845,7 +1673,7 @@ class TankWriteNodeHandler(object):
 
         return path
 
-    def __is_render_path_locked(self, node, render_path, cached_path, is_proxy=False):
+    def __is_render_path_locked(self, node, render_path, cached_path):
         """
         Return True if the render path is currently locked because something unexpected
         has changed.  When the render path is locked, the cached version will always be
@@ -1855,9 +1683,7 @@ class TankWriteNodeHandler(object):
         would be different to the cached path ignoring the width & height fields.
         """
         # get the render template:
-        render_template = self.__get_render_template(
-            node, is_proxy, fallback_to_render=True
-        )
+        render_template = self.__get_render_template(node)
         if not render_template:
             return True
 
