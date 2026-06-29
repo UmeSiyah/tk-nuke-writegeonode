@@ -235,10 +235,10 @@ class TankWriteNodeHandler(object):
 
         node_found = False
         for n in nuke.allNodes("ModifyMetaData"):
-            if not n.name().startswith("ShotgunWriteNodePlaceholder"):
+            if not n.name().startswith("ShotgunWriteGeoNodePlaceholder"):
                 continue
 
-            self._app.log_debug("Found ShotgunWriteNodePlaceholder node: %s" % n)
+            self._app.log_debug("Found ShotgunWriteGeoNodePlaceholder node: %s" % n)
             metadata = n.metadata()
             profile_name = metadata.get("name")
             output_name = metadata.get("output") or metadata.get(
