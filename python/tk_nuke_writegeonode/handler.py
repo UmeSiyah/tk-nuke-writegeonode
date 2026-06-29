@@ -33,9 +33,9 @@ class TankWriteNodeHandler(object):
     Handles requests and processing from a tank write node.
     """
 
-    SG_WRITE_NODE_CLASS = "WriteTank"
-    SG_WRITE_DEFAULT_NAME = "FlowProductionTrackingWrite"
-    WRITE_NODE_NAME = "Write1"
+    SG_WRITE_NODE_CLASS = "WriteGeoTank"
+    SG_WRITE_DEFAULT_NAME = "ShotGridWriteGeo"
+    WRITE_NODE_NAME = "WriteGeo1"
 
     OUTPUT_KNOB_NAME = "tank_channel"
     USE_NAME_AS_OUTPUT_KNOB_NAME = "tk_use_name_as_channel"
@@ -212,9 +212,9 @@ class TankWriteNodeHandler(object):
         will force the render path to be updated based on
         the current script path and configuration.
         """
-        is_proxy = node.proxy()
+        # WriteGeo nodes don't have proxy mode, so force is_proxy=False
+        is_proxy = False
         self.__update_render_path(node, force_reset=True, is_proxy=is_proxy)
-        self.__update_render_path(node, force_reset=True, is_proxy=(not is_proxy))
 
     def create_new_node(self, profile_name):
         """
@@ -388,14 +388,14 @@ class TankWriteNodeHandler(object):
 
     def convert_sg_to_nuke_write_nodes(self):
         """
-        Utility function to convert all Flow Production Tracking Write
-        nodes to regular Nuke Write nodes.
+        Utility function to convert all Flow Production Tracking WriteGeo
+        nodes to regular Nuke WriteGeo nodes.
 
         # Example use:
         import sgtk
         eng = sgtk.platform.current_engine()
-        app = eng.apps["tk-nuke-writenode"]
-        # Convert Shotgun write nodes to Nuke write nodes:
+        app = eng.apps["tk-nuke-writegeonode"]
+        # Convert Shotgun write geo nodes to Nuke WriteGeo nodes:
         app.convert_to_write_nodes()
 
         :param create_folders: When set to true, it will create the folders on disk for the render and proxy paths.
@@ -412,8 +412,8 @@ class TankWriteNodeHandler(object):
             node_name = sg_wn.name()
             node_pos = (sg_wn.xpos(), sg_wn.ypos())
 
-            # create new regular Write node:
-            new_wn = nuke.createNode("Write")
+            # create new regular WriteGeo node:
+            new_wn = nuke.createNode("WriteGeo")
             new_wn.setSelected(False)
 
             # copy across file & proxy knobs (if we've defined a proxy template):
@@ -504,16 +504,16 @@ class TankWriteNodeHandler(object):
 
     def convert_nuke_to_sg_write_nodes(self):
         """
-        Utility function to convert all Nuke Write nodes to Shotgun
-        Write nodes (only converts Write nodes that were previously
-        Flow Production Tracking Write nodes)
+        Utility function to convert all Nuke WriteGeo nodes to Shotgun
+        WriteGeo nodes (only converts WriteGeo nodes that were previously
+        Flow Production Tracking WriteGeo nodes)
 
         # Example use:
         import sgtk
         eng = sgtk.platform.current_engine()
-        app = eng.apps["tk-nuke-writenode"]
-        # Convert previously converted Nuke write nodes back to
-        # Shotgun write nodes:
+        app = eng.apps["tk-nuke-writegeonode"]
+        # Convert previously converted Nuke WriteGeo nodes back to
+        # Shotgun WriteGeo nodes:
         app.convert_from_write_nodes()
         """
         # clear current selection:
@@ -521,7 +521,7 @@ class TankWriteNodeHandler(object):
 
         # get write nodes:
         write_nodes = nuke.allNodes(
-            group=nuke.root(), filter="Write", recurseGroups=True
+            group=nuke.root(), filter="WriteGeo", recurseGroups=True
         )
         for wn in write_nodes:
             # look for additional toolkit knobs:
@@ -544,7 +544,7 @@ class TankWriteNodeHandler(object):
                 or not proxy_render_template_knob
                 or not proxy_publish_template_knob
             ):
-                # can't convert to a Shotgun Write Node as we have missing parameters!
+                # can't convert to a Shotgun WriteGeo Node as we have missing parameters!
                 continue
 
             # set as selected:
@@ -552,7 +552,7 @@ class TankWriteNodeHandler(object):
             node_name = wn.name()
             node_pos = (wn.xpos(), wn.ypos())
 
-            # create new Flow Production Tracking Write node:
+            # create new Flow Production Tracking WriteGeo node:
             new_sg_wn = nuke.createNode(TankWriteNodeHandler.SG_WRITE_NODE_CLASS)
             new_sg_wn.setSelected(False)
 
@@ -1723,86 +1723,19 @@ class TankWriteNodeHandler(object):
 
         return frames
 
-    def __calculate_proxy_dimensions(self, node):
-        """
-        Calculate the proxy dimensions for the specified node.
-
-        Note, there must be an easier way to do this - have emailed support! - also
-        this currently doesn't work if there is an upstream reformat node set to
-        anything other than a format (e.g. scale, box)!
-        """
-        if not nuke.exists("root"):
-            return
-        root = nuke.root()
-
-        # calculate scale and offset to apply for proxy
-        scale_x = scale_y = 1.0
-        offset_x = offset_y = 0.0
-
-        proxy_type = root.knob("proxy_type").value()
-        if proxy_type == "scale":
-            # simple scale factor:
-            scale_x = scale_y = root.knob("proxy_scale").value()
-        elif proxy_type == "format":
-            # Need to calculate scale and offset required to map the proxy format to the root format
-
-            # root format:
-            root_format = root.format()
-            root_w = root_format.width()
-            root_h = root_format.height()
-            root_aspect = root_format.pixelAspect()
-
-            # proxy format
-            proxy_format = root.knob("proxy_format").value()
-            proxy_w = proxy_format.width()
-            proxy_h = proxy_format.height()
-            proxy_aspect = proxy_format.pixelAspect()
-
-            # calculate scales and offsets required:
-            scale_x = float(proxy_w) / float(root_w)
-            scale_y = scale_x * (proxy_aspect / root_aspect)
-
-            offset_x = 0.0  # this always seems to be 0.0...
-            offset_y = (((proxy_h / scale_y) - root_h) * scale_y) / 2.0
-        else:
-            # unexpected type!
-            pass
-
-        # calculate the scaled format for the node:
-        scaled_format = node.format().scaled(scale_x, scale_y, offset_x, offset_y)
-
-        # print ("sx:", scale_x, "sy:", scale_y, "tx:", offset_x, "ty:", offset_y,
-        #        "w:", scaled_format.width(), "h:", scaled_format.height())
-        return (scaled_format.width(), scaled_format.height())
-
     def __gather_render_settings(self, node, is_proxy=False):
         """
         Gather the render template, width, height and output name required
         to compute the render path for the specified node.
 
-        :param node:         The current Flow Production Tracking Write node
+        :param node:         The current Flow Production Tracking WriteGeo node
         :param is_proxy:     If True then compute the proxy path, otherwise compute the standard render path
         :returns:            Tuple containing (render template, width, height, output name)
         """
         render_template = self.__get_render_template(node, is_proxy)
+        # 3D geometry exports have no resolution
         width = height = 0
         output_name = ""
-
-        if is_proxy:
-            if not render_template:
-                # we don't have a proxy template so fall back to render template.
-                # there will be a warning in the UI for this
-                #
-                # Note: to retain backwards compatibility, if no proxy template has
-                # been specified then the full-res dimensions will be used instead
-                # of the proxy dimensions.
-                return self.__gather_render_settings(node, False)
-
-            # width & height are set to the proxy dimensions:
-            width, height = self.__calculate_proxy_dimensions(node)
-        else:
-            # width & height are set to the node's dimensions:
-            width, height = node.width(), node.height()
 
         if render_template:
             # check for 'channel' for backwards compatibility
@@ -1870,10 +1803,6 @@ class TankWriteNodeHandler(object):
 
         # use %V - full view printout as default for the eye field
         fields["eye"] = "%V"
-
-        # add in width & height:
-        fields["width"] = width
-        fields["height"] = height
 
         # add in date values for YYYY, MM, DD
         today = datetime.date.today()

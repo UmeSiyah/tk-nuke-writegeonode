@@ -19,19 +19,17 @@ configuration:
         description: "A list of dictionaries in which you define the Flow Production Tracking
                      Write nodes that are supported in this configuration. Each dictionary entry
                      needs to have the following keys: 'name' - a descriptive name for this node.
-                     'file_type' - the file type to use for the renders (exr, cin, dpx etc).
-                     This will be passed to the Nuke write node when rendering. 'settings' -
+                     'file_type' - the file type to use for the renders (abc, obj, fbx etc).
+                     This will be passed to the Nuke WriteGeo node when rendering. 'settings' -
                      configuration settings for the given file type, as a dictionary. This too
-                     will be passed to the write node when rendering. Next, you need two entries
+                     will be passed to the WriteGeo node when rendering. Next, you need two entries
                      named 'render_template' and 'publish_template'
                      - these control the locations where data is written to at various stages
                      of the workflow. These templates need to include the 'version' field
-                     and can optionally include the fields 'name', 'width', 'height'
-                     (which reflect the image resolution of the render) and 'output' (which
-                     differenciates different write nodes). If you are doing stereo
-                     rendering and want to use Nuke's %V flag, include an 'eye' field.
-                     This will be replaced by %V in the paths when the Flow Production Tracking
-                     Write node computes them.  Finally, you need the templates 'proxy_render_template'
+                     and can optionally include the fields 'name' and 'output'
+                     (which reflect the geometry output name) and 'pf_element_name' and 'pf_element_variant'
+                     for published file element tracking.
+                     Finally, you need the templates 'proxy_render_template'
                      and 'proxy_publish_template' these have the same requirements as the regular
                      render and pubish templates but are used when rendering in proxy mode.  If
                      these are missing (set to null) then the regular templates will be used
@@ -50,18 +48,18 @@ configuration:
                     type: tank_type
                 render_template:
                     type: template
-                    fields: context, version, SEQ, [channel], [output], [name], [width], [height], [eye], [YYYY], [MM], [DD], *
+                    fields: context, version, SEQ, [channel], [output], [name], [pf_element_name], [pf_element_variant], *
                 publish_template:
                     type: template
-                    fields: context, version, SEQ, [channel], [output], [name], [width], [height], [eye], [TankType], *
+                    fields: context, version, SEQ, [channel], [output], [name], [pf_element_name], [pf_element_variant], [TankType], *
                 proxy_render_template:
                     type: template
-                    fields: context, version, SEQ, [channel], [output], [name], [width], [height], [eye], *
+                    fields: context, version, SEQ, [channel], [output], [name], [pf_element_name], [pf_element_variant], *
                     allows_empty: True
                     default_value: null
                 proxy_publish_template:
                     type: template
-                    fields: context, version, SEQ, [channel], [output], [name], [width], [height], [eye], [TankType], *
+                    fields: context, version, SEQ, [channel], [output], [name], [pf_element_name], [pf_element_variant], [TankType], *
                     allows_empty: True
                     default_value: null
                 tile_color:
@@ -77,7 +75,7 @@ configuration:
                     type: list
                     values:
                         type: str
-                    description:    "Specify a list of knob names that should be promoted from the internal write node
+                    description:    "Specify a list of knob names that should be promoted from the internal WriteGeo node
                                      up to the user interface of the gizmo."
                     allows_empty: True
                     default_value: []
@@ -87,7 +85,7 @@ configuration:
     show_convert_actions:
         type: bool
         description: "Setting this to True will add actions for converting to and from Flow Production Tracking
-                      write nodes. The actions will be displayed as options in the
+                      WriteGeo nodes. The actions will be displayed as options in the
                       Flow Production Tracking -> Context menu"
         default_value: False
 
@@ -101,8 +99,8 @@ configuration:
 requires_shotgun_fields:
 
 # More verbose description of this item
-display_name: "Write Node"
-description: "Support for the Flow Production Tracking Write Node in Nuke."
+display_name: "Write Geo Node"
+description: "Support for the Flow Production Tracking Write Geo Node in Nuke. Handles 3D geometry exports (Alembic, FBX, OBJ)."
 
 # Required minimum versions for this item to run
 requires_shotgun_version:

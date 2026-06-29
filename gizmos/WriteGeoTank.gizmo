@@ -33,7 +33,7 @@ Gizmo {
  mapsize {0.15 0.15}
  addUserKnob {
     20 tank_tab
-    l "Flow Production Tracking Write"
+    l "Flow Production Tracking Write Geo"
  }
  addUserKnob {
     4 tk_profile_list
@@ -45,7 +45,7 @@ Gizmo {
  addUserKnob {
     1 tank_channel
     l "Output"
-    t "Choose an output name for this Write Node to help identify it when you have more than one output in your scene."
+    t "Choose an output name for this WriteGeo Node to help identify it when you have more than one output in your scene."
     +STARTLINE
  }
  addUserKnob {
@@ -83,7 +83,7 @@ Gizmo {
  addUserKnob {
     1 cached_path
     l "Sgtk Cached Path"
-    t "The path for this write node"
+    t "The path for this write geo node"
     +INVISIBLE
  }
  addUserKnob {
@@ -101,31 +101,31 @@ Gizmo {
  addUserKnob {
     1 tk_cached_proxy_path
     l "Sgtk Cached Proxy Path"
-    t "The path for this write node when rendering in proxy mode"
+    t "The path for this write geo node when rendering in proxy mode"
     +INVISIBLE
  }
  addUserKnob {
     1 tk_last_known_script
     l "Last Known Script"
-    t "The last known script this Write node was saved in - used to determine if the script is being saved as a new file or not"
+    t "The last known script this WriteGeo node was saved in - used to determine if the script is being saved as a new file or not"
     +INVISIBLE
  }
  addUserKnob {
     1 tk_file_type
     l "File Type"
-    t "The file type to be used for the write node output - this cached value is used if the profile can't be determined"
+    t "The file type to be used for the write geo node output - this cached value is used if the profile can't be determined"
     +INVISIBLE
  }
  addUserKnob {
     1 tk_file_type_settings
     l "File Type Settings"
-    t "A dictionary of file type settings to be applied to the Write node - this cached value is used if the profile can't be determined"
+    t "A dictionary of file type settings to be applied to the WriteGeo node - this cached value is used if the profile can't be determined"
     +INVISIBLE
  }
  addUserKnob {
     1 tk_write_node_settings
-    l "Write Node Settings"
-    t "A string of tcl containing a record of settings for the internal write node at save time."
+    l "WriteGeo Node Settings"
+    t "A string of tcl containing a record of settings for the internal write geo node at save time."
     +INVISIBLE
  }
 
@@ -169,7 +169,7 @@ Gizmo {
  addUserKnob {
     22 reset_path
     l "Reset Path"
-    T "import nuke\nif hasattr(nuke, \"_shotgun_write_node_handler\"):\n    nuke._shotgun_write_node_handler.on_reset_render_path_gizmo_callback()"
+    T "import nuke\nif hasattr(nuke, \"_shotgun_writegeo_node_handler\"):\n    nuke._shotgun_writegeo_node_handler.on_reset_render_path_gizmo_callback()"
     +STARTLINE
  }
 
@@ -182,14 +182,14 @@ Gizmo {
  addUserKnob {
     22 show_in_fs
     l "Jump to File System"
-    T "import nuke\nif hasattr(nuke, \"_shotgun_write_node_handler\"):\n    nuke._shotgun_write_node_handler.on_show_in_fs_gizmo_callback()"
+    T "import nuke\nif hasattr(nuke, \"_shotgun_writegeo_node_handler\"):\n    nuke._shotgun_writegeo_node_handler.on_show_in_fs_gizmo_callback()"
     t "Opens a file system browser and navigates to the folder where the renders are written to."
     +STARTLINE
  }
  addUserKnob {
     22 tk_copy_path
     l "Copy Path to Clipboard"
-    T "import nuke\nif hasattr(nuke, \"_shotgun_write_node_handler\"):\n    nuke._shotgun_write_node_handler.on_copy_path_to_clipboard_gizmo_callback()"
+    T "import nuke\nif hasattr(nuke, \"_shotgun_writegeo_node_handler\"):\n    nuke._shotgun_writegeo_node_handler.on_copy_path_to_clipboard_gizmo_callback()"
     t "Copies the current render/proxy path to the clipboard"
     -STARTLINE
  }
@@ -200,38 +200,23 @@ Gizmo {
     +STARTLINE
  }
  addUserKnob {
-    41 channels
-    T Write1.channels
+    41 file_type
+    T WriteGeo1.file_type
  }
  addUserKnob {
     41 frame_mode
     l frame
-    T Write1.frame_mode
+    T WriteGeo1.frame_mode
  }
  addUserKnob {
     41 frame
     l ""
-    T Write1.frame
-    -STARTLINE
- }
- addUserKnob {
-    41 colorspace
-    T Write1.colorspace
- }
- addUserKnob {
-    41 raw
-    l "raw data"
-    T Write1.raw
-    -STARTLINE
- }
- addUserKnob {
-    41 premultiplied
-    T Write1.premultiplied
+    T WriteGeo1.frame
     -STARTLINE
  }
  addUserKnob {
     41 views
-    T Write1.views
+    T WriteGeo1.views
  }
 
  addUserKnob {
@@ -249,51 +234,51 @@ Gizmo {
  addUserKnob {
     41 render_order
     l "render order"
-    T Write1.render_order
+    T WriteGeo1.render_order
  }
  addUserKnob {
     41 Render
-    T Write1.Render
+    T WriteGeo1.Render
     -STARTLINE
  }
  addUserKnob {
     41 first
     l "frame range"
-    T Write1.first
+    T WriteGeo1.first
  }
  addUserKnob {
     41 last
     l ""
-    T Write1.last
+    T WriteGeo1.last
     -STARTLINE
  }
  addUserKnob {
     41 use_limit
     l "limit to range"
-    T Write1.use_limit
+    T WriteGeo1.use_limit
     -STARTLINE
  }
 
  addUserKnob {
     41 reading
     l "read file"
-    T Write1.reading
+    T WriteGeo1.reading
  }
  addUserKnob {
     41 checkHashOnRead
     l ""
-    T Write1.checkHashOnRead
+    T WriteGeo1.checkHashOnRead
     +INVISIBLE
  }
  addUserKnob {
     41 on_error
     l "missing frames"
-    T Write1.on_error
+    T WriteGeo1.on_error
  }
  addUserKnob {
     41 reload
     l Reload
-    T Write1.reload
+    T WriteGeo1.reload
     -STARTLINE
  }
 
@@ -407,13 +392,13 @@ Gizmo {
     l "Python"
  }
  addUserKnob {1 tk_before_render l "before render"}
- addUserKnob {41 beforeFrameRender l "before each frame" T Write1.beforeFrameRender}
- addUserKnob {41 afterFrameRender l "after each frame" T Write1.afterFrameRender}
+ addUserKnob {41 beforeFrameRender l "before each frame" T WriteGeo1.beforeFrameRender}
+ addUserKnob {41 afterFrameRender l "after each frame" T WriteGeo1.afterFrameRender}
  addUserKnob {1 tk_after_render l "after render"}
- addUserKnob {41 renderProgress l "render progress" T Write1.renderProgress}
+ addUserKnob {41 renderProgress l "render progress" T WriteGeo1.renderProgress}
 
- knobChanged "import nuke\nif hasattr(nuke, \"_shotgun_write_node_handler\"):\n    nuke._shotgun_write_node_handler.on_knob_changed_gizmo_callback()"
- onCreate "import nuke\nif hasattr(nuke, \"_shotgun_write_node_handler\"):\n    nuke._shotgun_write_node_handler.on_node_created_gizmo_callback()"
+ knobChanged "import nuke\nif hasattr(nuke, \"_shotgun_writegeo_node_handler\"):\n    nuke._shotgun_writegeo_node_handler.on_knob_changed_gizmo_callback()"
+ onCreate "import nuke\nif hasattr(nuke, \"_shotgun_writegeo_node_handler\"):\n    nuke._shotgun_writegeo_node_handler.on_node_created_gizmo_callback()"
 }
  Input {
   inputs 0
@@ -421,12 +406,12 @@ Gizmo {
   xpos 195
   ypos -74
  }
- Write {
-  file  "\[python __import__('nuke')._shotgun_write_node_handler.on_compute_path_gizmo_callback() if hasattr(__import__('nuke'), '_shotgun_write_node_handler') else nuke.thisParent().knob('cached_path').value()]"
-  proxy "\[python __import__('nuke')._shotgun_write_node_handler.on_compute_proxy_path_gizmo_callback() if hasattr(__import__('nuke'), '_shotgun_write_node_handler') else nuke.thisParent().knob('tk_cached_proxy_path').value()]"
-  beforeRender "import nuke\nif hasattr(nuke, \"_shotgun_write_node_handler\"):\n    nuke._shotgun_write_node_handler.on_before_render_gizmo_callback()"
-  afterRender "import nuke\nif hasattr(nuke, \"_shotgun_write_node_handler\"):\n    nuke._shotgun_write_node_handler.on_after_render_gizmo_callback()"
-  name Write1
+ WriteGeo {
+  file  "\[python __import__('nuke')._shotgun_writegeo_node_handler.on_compute_path_gizmo_callback() if hasattr(__import__('nuke'), '_shotgun_writegeo_node_handler') else nuke.thisParent().knob('cached_path').value()]"
+  proxy "\[python __import__('nuke')._shotgun_writegeo_node_handler.on_compute_proxy_path_gizmo_callback() if hasattr(__import__('nuke'), '_shotgun_writegeo_node_handler') else nuke.thisParent().knob('tk_cached_proxy_path').value()]"
+  beforeRender "import nuke\nif hasattr(nuke, \"_shotgun_writegeo_node_handler\"):\n    nuke._shotgun_writegeo_node_handler.on_before_render_gizmo_callback()"
+  afterRender "import nuke\nif hasattr(nuke, \"_shotgun_writegeo_node_handler\"):\n    nuke._shotgun_writegeo_node_handler.on_after_render_gizmo_callback()"
+  name WriteGeo1
   xpos 195
   ypos -34
  }
