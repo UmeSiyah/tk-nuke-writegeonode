@@ -1658,6 +1658,11 @@ class TankWriteNodeHandler(object):
                         )
                     fields[key_name] = output_name
 
+        if "cache_ext" in render_template.keys:
+            profile_settings = self.__get_node_profile_settings(node)
+            if profile_settings and "cache_ext" in profile_settings:
+                fields["cache_ext"] = profile_settings["cache_ext"]
+
         # update with additional fields from the context:
         fields.update(self._app.context.as_template_fields(render_template))
 
