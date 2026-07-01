@@ -1484,31 +1484,31 @@ class TankWriteNodeHandler(object):
                         render_path,
                     )
 
-                # Also update the 'last known script' to be the current script
-                # this mechanism is used to determine if the script is being saved
-                # as a new file or as the same file in the onScriptSave callback
-                last_known_script_knob = node.knob("tk_last_known_script")
-                if force_reset or not last_known_script_knob.value():
-                    last_known_script_knob.setValue(script_path)
+            # Also update the 'last known script' to be the current script
+            # this mechanism is used to determine if the script is being saved
+            # as a new file or as the same file in the onScriptSave callback
+            last_known_script_knob = node.knob("tk_last_known_script")
+            if force_reset or not last_known_script_knob.value():
+                last_known_script_knob.setValue(script_path)
 
-                # Update the UI to represent the current state:
-                # update warning displayed to the user:
-                if path_warning:
-                    path_warning = (
-                        "<i style='color:orange'><b><br>Warning</b><br>%s</i><br>"
-                        % path_warning
-                    )
-                    self.__update_knob_value(node, "path_warning", path_warning)
-                    node.knob("path_warning").setVisible(True)
-                else:
-                    self.__update_knob_value(node, "path_warning", "")
-                    node.knob("path_warning").setVisible(False)
-                node.knob("reset_path").setVisible(reset_path_button_visible)
-                # update the render warning label if needed:
-                self.__update_output_knobs(node)
+            # Update the UI to represent the current state:
+            # update warning displayed to the user:
+            if path_warning:
+                path_warning = (
+                    "<i style='color:orange'><b><br>Warning</b><br>%s</i><br>"
+                    % path_warning
+                )
+                self.__update_knob_value(node, "path_warning", path_warning)
+                node.knob("path_warning").setVisible(True)
+            else:
+                self.__update_knob_value(node, "path_warning", "")
+                node.knob("path_warning").setVisible(False)
+            node.knob("reset_path").setVisible(reset_path_button_visible)
+            # update the render warning label if needed:
+            self.__update_output_knobs(node)
 
-                # finally, update preview:
-                self.__update_path_preview(node)
+            # finally, update preview:
+            self.__update_path_preview(node)
 
             return render_path
 
