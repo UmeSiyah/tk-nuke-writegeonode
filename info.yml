@@ -43,10 +43,10 @@ configuration:
                     type: tank_type
                 render_template:
                     type: template
-                    fields: context, version, SEQ, [channel], [output], [name], [pf_element_name], [pf_element_variant], *
+                    fields: context, version, [SEQ], [channel], [output], [name], [pf_element_name], [pf_element_variant], *
                 publish_template:
                     type: template
-                    fields: context, version, SEQ, [channel], [output], [name], [pf_element_name], [pf_element_variant], [TankType], *
+                    fields: context, version, [SEQ], [channel], [output], [name], [pf_element_name], [pf_element_variant], [TankType], *
                 tile_color:
                     type: list
                     values:
