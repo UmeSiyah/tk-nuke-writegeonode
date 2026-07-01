@@ -279,52 +279,11 @@ class TankWriteNodeHandler(object):
 
         Returns None if no thumbnail could be generated
         """
-        # get thumbnail node
-
-        th_node = node.node("create_thumbnail")
-        if th_node is None:
-            # write gizmo that does not have the create thumbnail node
-            return None
-        th_node.knob("disable").setValue(False)
-
-        png_path = tempfile.NamedTemporaryFile(
-            suffix=".png", prefix="tanktmp", delete=False
-        ).name
-
-        # set render output - make sure to use a path with slashes on all OSes
-        th_node.knob("file").setValue(png_path.replace(os.path.sep, "/"))
-
-        # and finally render!
-        try:
-            # pick mid frame
-            current_in = nuke.root()["first_frame"].value()
-            current_out = nuke.root()["last_frame"].value()
-            frame_to_render = (current_out - current_in) / 2 + current_in
-            frame_to_render = int(frame_to_render)
-            render_node_name = "%s.create_thumbnail" % node.name()
-            # and do it - always render the first view we find.
-            first_view = nuke.views()[0]
-            nuke.execute(
-                render_node_name,
-                start=frame_to_render,
-                end=frame_to_render,
-                incr=1,
-                views=[first_view],
-            )
-        except Exception as e:
-            self._app.log_warning("Thumbnail could not be generated: %s" % e)
-            # remove the temp file
-            try:
-                os.remove(png_path)
-            except:
-                pass
-            png_path = None
-        finally:
-            # reset paths
-            th_node.knob("file").setValue("")
-            th_node.knob("disable").setValue(True)
-
-        return png_path
+        # Thumbnail generation is not supported for geometry exports.
+        # Geometry exports do not allow for native PNG thumbnail generation
+        # in the same way an image render does, and the internal create_thumbnail
+        # node has been removed from the Gizmo.
+        return None
 
     def add_callbacks(self):
         """
@@ -1371,11 +1330,11 @@ class TankWriteNodeHandler(object):
             if node in self.__currently_rendering_nodes:
                 # when rendering we don't want to re-evaluate the paths as doing
                 # so can cause problems!  Specifically, I found that accessing
-                # width, height or format on a node can cause the evaluation
+                # certain properties on a node can cause the evaluation
                 # of the internal Write node file to not be evaluated!!
                 return cached_path
 
-            # it seems that querying certain things (e.g. node.width()) will sometimes cause the render
+            # it seems that querying certain things will sometimes cause the render
             #  causing this function to be called recursively which
             # can break things!  In case that happens we use some flags to track it so that the path
             # only gets updated once.
@@ -1395,8 +1354,6 @@ class TankWriteNodeHandler(object):
                 # gather the render settings to use when computing the path:
                 (
                     render_template,
-                    width,
-                    height,
                     output_name,
                 ) = self.__gather_render_settings(node)
 
@@ -1407,8 +1364,6 @@ class TankWriteNodeHandler(object):
                 old_cache_entry, compute_path_error, render_path = cache_item
                 cache_entry = {
                     "ctx": self._app.context,
-                    "width": width,
-                    "height": height,
                     "output": output_name,
                     "script_path": script_path,
                 }
@@ -1425,7 +1380,7 @@ class TankWriteNodeHandler(object):
                 else:
                     # compute the render path:
                     render_path = self.__compute_render_path_from(
-                        node, render_template, width, height, output_name
+                        node, render_template, output_name
                     )
 
             except TkComputePathError as e:
@@ -1479,7 +1434,7 @@ class TankWriteNodeHandler(object):
                 if not force_reset:
                     # if we force-reset the path then it will never be locked, otherwise we need to test
                     # to see if it is locked.  A path is considered locked if the render path differs
-                    # from the cached path ignoring certain dynamic fields (e.g. width, height).
+                    # from the cached path ignoring certain dynamic fields .
                     path_is_locked = self.__is_render_path_locked(
                         node, render_path, cached_path
                     )
@@ -1579,22 +1534,20 @@ class TankWriteNodeHandler(object):
 
         fields = template.get_fields(file_name)
 
-        # make sure we don't look for any eye - %V or SEQ - %04d stuff
-        frames = self._app.sgtk.paths_from_template(template, fields, ["SEQ", "eye"])
+        # make sure we don't look for any SEQ - %04d stuff
+        frames = self._app.sgtk.paths_from_template(template, fields, ["SEQ"])
 
         return frames
 
     def __gather_render_settings(self, node):
         """
-        Gather the render template, width, height and output name required
+        Gather the render template and output name required
         to compute the render path for the specified node.
 
         :param node:         The current Flow Production Tracking WriteGeo node
-        :returns:            Tuple containing (render template, width, height, output name)
+        :returns:            Tuple containing (render template, output name)
         """
         render_template = self.__get_render_template(node)
-        # 3D geometry exports have no resolution
-        width = height = 0
         output_name = ""
 
         if render_template:
@@ -1602,7 +1555,7 @@ class TankWriteNodeHandler(object):
             if "output" in render_template.keys or "channel" in render_template.keys:
                 output_name = node.knob(TankWriteNodeHandler.OUTPUT_KNOB_NAME).value()
 
-        return (render_template, width, height, output_name)
+        return (render_template, output_name)
 
     def __compute_render_path(self, node):
         """
@@ -1613,25 +1566,17 @@ class TankWriteNodeHandler(object):
         """
 
         # gather the render settings to use:
-        render_template, width, height, output_name = self.__gather_render_settings(
-            node
-        )
+        render_template, output_name = self.__gather_render_settings(node)
 
         # compute the render path:
-        return self.__compute_render_path_from(
-            node, render_template, width, height, output_name
-        )
+        return self.__compute_render_path_from(node, render_template, output_name)
 
-    def __compute_render_path_from(
-        self, node, render_template, width, height, output_name
-    ):
+    def __compute_render_path_from(self, node, render_template, output_name):
         """
         Computes the render path for a node using the specified settings
 
         :param node:               The current Flow Production Tracking Write node
         :param render_template:    The render template to use to construct the render path
-        :param width:              The width of the rendered images
-        :param height:             The height of the rendered images
         :param output_name:        The toolkit output name specified by the user for this node
         :returns:                  The computed render path
         """
@@ -1659,9 +1604,6 @@ class TankWriteNodeHandler(object):
 
         # Force use of %d format for nuke renders:
         fields["SEQ"] = "FORMAT: %d"
-
-        # use %V - full view printout as default for the eye field
-        fields["eye"] = "%V"
 
         # add in date values for YYYY, MM, DD
         today = datetime.date.today()
@@ -1732,7 +1674,7 @@ class TankWriteNodeHandler(object):
         used until it has been reset by an intentional user change/edit.
 
         The path is locked if a new path generated with the previous template fields
-        would be different to the cached path ignoring the width & height fields.
+        would be different to the cached path.
         """
         # get the render template:
         render_template = self.__get_render_template(node)
@@ -1746,7 +1688,7 @@ class TankWriteNodeHandler(object):
             # - Extract previous fields from cached path - if this fails then it tells us
             #   that a static part of the template has changed
             # - Compare previous fields with new fields - this will tell us if a field we
-            #   care about has changed (we can ignore width, height differences).
+            #   care about has changed.
             prev_fields = {}
             try:
                 prev_fields = render_template.get_fields(cached_path)
@@ -1764,7 +1706,7 @@ class TankWriteNodeHandler(object):
                             path_is_locked = True
                             break
 
-                        if name in ["width", "height", "YYYY", "MM", "DD"]:
+                        if name in ["YYYY", "MM", "DD"]:
                             # ignore these as they are free to change!
                             continue
                         elif prev_fields[name] != value:
