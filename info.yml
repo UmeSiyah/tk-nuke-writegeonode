@@ -20,7 +20,9 @@ configuration:
                      Write nodes that are supported in this configuration. Each dictionary entry
                      needs to have the following keys: 'name' - a descriptive name for this node.
                      'file_type' - the file type to use for the renders (abc, obj, fbx etc).
-                     This will be passed to the Nuke WriteGeo node when rendering. 'settings' -
+                     This will be passed to the Nuke WriteGeo node when rendering. 'cache_ext' -
+                     the file extension to use for the '{cache_ext}' template field, required
+                     whenever the configured templates use it. 'settings' -
                      configuration settings for the given file type, as a dictionary. This too
                      will be passed to the WriteGeo node when rendering. Next, you need two entries
                      named 'render_template' and 'publish_template'
@@ -37,6 +39,11 @@ configuration:
                     type: str
                 file_type:
                     type: str
+                cache_ext:
+                    type: str
+                    description: "The file extension to use for the '{cache_ext}' template field
+                                 (e.g. abc, obj, fbx). Required whenever the configured
+                                 render_template/publish_template make use of that field."
                 settings:
                     type: dict
                 tank_type:

@@ -39,6 +39,8 @@ class TankWriteNodeHandler(object):
 
     OUTPUT_KNOB_NAME = "tank_channel"
     USE_NAME_AS_OUTPUT_KNOB_NAME = "tk_use_name_as_channel"
+    PF_ELEMENT_NAME_KEY = "pf_element_name"
+    PF_ELEMENT_VARIANT_KEY = "pf_element_variant"
 
     ################################################################################################
     # Construction
@@ -819,6 +821,15 @@ class TankWriteNodeHandler(object):
         # check for output key and also channel for backwards compatibility!
         return "output" in render_template.keys or "channel" in render_template.keys
 
+    def __is_key_used(self, node, key):
+        """
+        Determine if the specified key is used in the render template
+        """
+        render_template = self.__get_render_template(node)
+        if not render_template:
+            return False
+        return key in render_template.keys
+
     def __update_knob_value(self, node, name, new_value):
         """
         Update the value for the specified knob on the specified node
@@ -845,6 +856,16 @@ class TankWriteNodeHandler(object):
         output_knob.setEnabled(output_is_used and not name_as_output)
         output_knob.setVisible(output_is_used)
         name_as_output_knob.setVisible(output_is_used)
+
+        # Update additional outputs
+        for additional_output in (
+            TankWriteNodeHandler.PF_ELEMENT_NAME_KEY,
+            TankWriteNodeHandler.PF_ELEMENT_VARIANT_KEY,
+        ):
+            knob = node.knob(additional_output)
+            key_used = self.__is_key_used(node, additional_output)
+            knob.setEnabled(key_used)
+            knob.setVisible(key_used)
 
     def __update_path_preview(self, node):
         """
@@ -1107,6 +1128,16 @@ class TankWriteNodeHandler(object):
         Create a suitable output name for a node based on it's profile and
         the other nodes that already exist in the scene.
         """
+        for key in [
+            TankWriteNodeHandler.PF_ELEMENT_NAME_KEY,
+            TankWriteNodeHandler.PF_ELEMENT_VARIANT_KEY,
+        ]:
+            if key in template.keys:
+                knob = node.knob(key)
+                if knob and not knob.value():
+                    default_val = template.keys[key].default
+                    knob.setValue(default_val)
+
         if node.knob(TankWriteNodeHandler.OUTPUT_KNOB_NAME).value():
             # don't want to modify the current value if there is one
             return
@@ -1663,6 +1694,22 @@ class TankWriteNodeHandler(object):
             if profile_settings and "cache_ext" in profile_settings:
                 fields["cache_ext"] = profile_settings["cache_ext"]
 
+        for element_key in [
+            TankWriteNodeHandler.PF_ELEMENT_NAME_KEY,
+            TankWriteNodeHandler.PF_ELEMENT_VARIANT_KEY,
+        ]:
+            if element_key not in render_template.keys:
+                continue
+            value = node.knob(element_key).value()
+            if value:
+                if not render_template.keys[element_key].validate(value):
+                    raise TkComputePathError("Illegal characters in '%s'!" % element_key)
+                fields[element_key] = value
+            elif not render_template.is_optional(element_key):
+                raise TkComputePathError(
+                    "A valid name is required for the '%s' field!" % element_key
+                )
+
         # update with additional fields from the context:
         fields.update(self._app.context.as_template_fields(render_template))
 
@@ -1878,6 +1925,12 @@ class TankWriteNodeHandler(object):
             if name_as_output:
                 # update output to reflect the node name:
                 self.__set_output(node, node.knob("name").value())
+
+        elif knob.name() in [
+            TankWriteNodeHandler.PF_ELEMENT_NAME_KEY,
+            TankWriteNodeHandler.PF_ELEMENT_VARIANT_KEY,
+        ]:
+            self.reset_render_path(node)
 
         else:
             # Propagate changes to certain knobs from the gizmo/group to the

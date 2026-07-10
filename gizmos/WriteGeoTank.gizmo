@@ -55,6 +55,18 @@ Gizmo {
     -STARTLINE
  }
  addUserKnob {
+    1 pf_element_name
+    l "Element Name"
+    t "Choose an element name for this WriteGeo Node to help identify it when you have more than one output in your scene."
+    +STARTLINE
+ }
+ addUserKnob {
+    1 pf_element_variant
+    l "Element Variant"
+    t "Choose an element var for this WriteGeo Node to help identify it when you have more than one output in your scene."
+    -STARTLINE
+ }
+ addUserKnob {
     6 tk_is_fully_constructed
     l "Is Fully Constructed"
     t "Internal - Gets set to True in 'onCreate'.  All 'knobChanged' calls before this are ignored"
