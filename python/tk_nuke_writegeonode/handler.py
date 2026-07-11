@@ -246,6 +246,8 @@ class TankWriteNodeHandler(object):
             output_name = metadata.get("output") or metadata.get(
                 "channel"
             )  # for backwards compatibility
+            element_name = metadata.get("pf_element_name")
+            element_variant = metadata.get("pf_element_variant")
 
             # Make sure the profile is valid:
             if profile_name not in self._profiles:
@@ -267,6 +269,10 @@ class TankWriteNodeHandler(object):
 
             # set the output:
             self.__set_output(new_node, output_name)
+
+            # set the element name/variant, if provided by the template:
+            if element_name or element_variant:
+                self.__set_element_fields(new_node, element_name, element_variant)
 
             # And remove the original metadata
             nuke.delete(n)
@@ -976,6 +982,8 @@ class TankWriteNodeHandler(object):
         file_settings = profile["settings"]
         tile_color = profile["tile_color"]
         promote_write_knobs = profile.get("promote_write_knobs", [])
+        element_name = profile.get("pf_element_name")
+        element_variant = profile.get("pf_element_variant")
 
         # Make sure any invalid entries are removed from the profile list:
         list_profiles = node.knob("tk_profile_list").values()
@@ -994,6 +1002,10 @@ class TankWriteNodeHandler(object):
             reset_all_settings,
             promote_write_knobs,
         )
+
+        # apply fixed element name/variant from the profile, if declared:
+        if element_name or element_variant:
+            self.__set_element_fields(node, element_name, element_variant)
 
         # cache the type and settings on the root node so that
         # they get serialized with the script:
@@ -1284,6 +1296,28 @@ class TankWriteNodeHandler(object):
         self.__update_knob_value(
             node, TankWriteNodeHandler.OUTPUT_KNOB_NAME, output_name
         )
+
+        # reset the render path:
+        self.reset_render_path(node)
+
+    def __set_element_fields(self, node, element_name=None, element_variant=None):
+        """
+        Set the pf_element_name / pf_element_variant knobs on the specified node,
+        from user interaction or template placeholder metadata.
+        """
+        self._app.log_debug(
+            "Setting element fields for node '%s': name=%s, variant=%s"
+            % (node.name(), element_name, element_variant)
+        )
+
+        if element_name:
+            self.__update_knob_value(
+                node, TankWriteNodeHandler.PF_ELEMENT_NAME_KEY, element_name
+            )
+        if element_variant:
+            self.__update_knob_value(
+                node, TankWriteNodeHandler.PF_ELEMENT_VARIANT_KEY, element_variant
+            )
 
         # reset the render path:
         self.reset_render_path(node)
