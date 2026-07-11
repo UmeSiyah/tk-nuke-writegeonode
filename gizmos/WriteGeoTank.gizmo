@@ -67,6 +67,18 @@ Gizmo {
     -STARTLINE
  }
  addUserKnob {
+    1 sg_asset_type
+    l "Sg Asset Type"
+    t "Internal - Fallback 'sg_asset_type' template field, populated from the node's profile when the current context has no linked Asset (e.g. a Shot-only publish)."
+    +INVISIBLE
+ }
+ addUserKnob {
+    1 Asset
+    l "Asset"
+    t "Internal - Fallback 'Asset' template field, populated from the node's profile when the current context has no linked Asset (e.g. a Shot-only publish)."
+    +INVISIBLE
+ }
+ addUserKnob {
     6 tk_is_fully_constructed
     l "Is Fully Constructed"
     t "Internal - Gets set to True in 'onCreate'.  All 'knobChanged' calls before this are ignored"

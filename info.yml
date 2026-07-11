@@ -83,6 +83,20 @@ configuration:
                                      created from this profile (placeholder metadata takes precedence if set)."
                     allows_empty: True
                     default_value: ""
+                sg_asset_type:
+                    type: str
+                    description:    "Optional fallback value for the 'sg_asset_type' template field, only used
+                                     when the current context has no linked Asset (e.g. a Shot-only publish).
+                                     Ignored when the context provides its own sg_asset_type."
+                    allows_empty: True
+                    default_value: ""
+                Asset:
+                    type: str
+                    description:    "Optional fallback value for the 'Asset' template field, only used when
+                                     the current context has no linked Asset. Defaults to 'pf_element_name'
+                                     when not set. Ignored when the context provides its own Asset."
+                    allows_empty: True
+                    default_value: ""
 
     # Note that if you have presets which promote write knobs, the convert menu items will not be shown, regardless
     # of the value applied to this setting, as at present the convert back method doesn't support promoted knobs.

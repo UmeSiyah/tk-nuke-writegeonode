@@ -41,6 +41,8 @@ class TankWriteNodeHandler(object):
     USE_NAME_AS_OUTPUT_KNOB_NAME = "tk_use_name_as_channel"
     PF_ELEMENT_NAME_KEY = "pf_element_name"
     PF_ELEMENT_VARIANT_KEY = "pf_element_variant"
+    SG_ASSET_TYPE_KEY = "sg_asset_type"
+    ASSET_KEY = "Asset"
 
     ################################################################################################
     # Construction
@@ -248,6 +250,8 @@ class TankWriteNodeHandler(object):
             )  # for backwards compatibility
             element_name = metadata.get("pf_element_name")
             element_variant = metadata.get("pf_element_variant")
+            sg_asset_type = metadata.get("sg_asset_type")
+            asset = metadata.get("Asset")
 
             # Make sure the profile is valid:
             if profile_name not in self._profiles:
@@ -270,9 +274,11 @@ class TankWriteNodeHandler(object):
             # set the output:
             self.__set_output(new_node, output_name)
 
-            # set the element name/variant, if provided by the template:
-            if element_name or element_variant:
-                self.__set_element_fields(new_node, element_name, element_variant)
+            # set the element name/variant/asset fields, if provided by the template:
+            if element_name or element_variant or sg_asset_type or asset:
+                self.__set_element_fields(
+                    new_node, element_name, element_variant, sg_asset_type, asset
+                )
 
             # And remove the original metadata
             nuke.delete(n)
@@ -984,6 +990,8 @@ class TankWriteNodeHandler(object):
         promote_write_knobs = profile.get("promote_write_knobs", [])
         element_name = profile.get("pf_element_name")
         element_variant = profile.get("pf_element_variant")
+        sg_asset_type = profile.get("sg_asset_type")
+        asset = profile.get("Asset")
 
         # Make sure any invalid entries are removed from the profile list:
         list_profiles = node.knob("tk_profile_list").values()
@@ -1003,9 +1011,11 @@ class TankWriteNodeHandler(object):
             promote_write_knobs,
         )
 
-        # apply fixed element name/variant from the profile, if declared:
-        if element_name or element_variant:
-            self.__set_element_fields(node, element_name, element_variant)
+        # apply fixed element name/variant/asset fields from the profile, if declared:
+        if element_name or element_variant or sg_asset_type or asset:
+            self.__set_element_fields(
+                node, element_name, element_variant, sg_asset_type, asset
+            )
 
         # cache the type and settings on the root node so that
         # they get serialized with the script:
@@ -1300,14 +1310,28 @@ class TankWriteNodeHandler(object):
         # reset the render path:
         self.reset_render_path(node)
 
-    def __set_element_fields(self, node, element_name=None, element_variant=None):
+    def __set_element_fields(
+        self,
+        node,
+        element_name=None,
+        element_variant=None,
+        sg_asset_type=None,
+        asset=None,
+    ):
         """
-        Set the pf_element_name / pf_element_variant knobs on the specified node,
-        from user interaction or template placeholder metadata.
+        Set the pf_element_name / pf_element_variant / sg_asset_type / Asset knobs on the
+        specified node, from user interaction, template placeholder metadata or profile config.
+
+        sg_asset_type/asset are fallback values only used by templates that require them
+        (e.g. static_cache_shot_publish) in a context that has no linked Asset entity - when
+        the context does have one, its real Asset/sg_asset_type take precedence (see
+        __compute_render_path_from). If 'asset' isn't provided, it defaults to element_name,
+        matching the convention used elsewhere in the pipeline for Track-step camera/set caches.
         """
         self._app.log_debug(
-            "Setting element fields for node '%s': name=%s, variant=%s"
-            % (node.name(), element_name, element_variant)
+            "Setting element fields for node '%s': name=%s, variant=%s, "
+            "sg_asset_type=%s, asset=%s"
+            % (node.name(), element_name, element_variant, sg_asset_type, asset)
         )
 
         if element_name:
@@ -1318,6 +1342,13 @@ class TankWriteNodeHandler(object):
             self.__update_knob_value(
                 node, TankWriteNodeHandler.PF_ELEMENT_VARIANT_KEY, element_variant
             )
+        if sg_asset_type:
+            self.__update_knob_value(
+                node, TankWriteNodeHandler.SG_ASSET_TYPE_KEY, sg_asset_type
+            )
+        asset = asset or element_name
+        if asset:
+            self.__update_knob_value(node, TankWriteNodeHandler.ASSET_KEY, asset)
 
         # reset the render path:
         self.reset_render_path(node)
@@ -1673,6 +1704,8 @@ class TankWriteNodeHandler(object):
         for element_key in [
             TankWriteNodeHandler.PF_ELEMENT_NAME_KEY,
             TankWriteNodeHandler.PF_ELEMENT_VARIANT_KEY,
+            TankWriteNodeHandler.SG_ASSET_TYPE_KEY,
+            TankWriteNodeHandler.ASSET_KEY,
         ]:
             if element_key not in render_template.keys:
                 continue
@@ -1686,7 +1719,10 @@ class TankWriteNodeHandler(object):
                     "A valid name is required for the '%s' field!" % element_key
                 )
 
-        # update with additional fields from the context:
+        # update with additional fields from the context. This takes precedence over the
+        # profile-provided fallback above whenever the context actually has an Asset linked
+        # (e.g. an asset_step context); in a Shot-only context (no linked Asset), the context
+        # doesn't supply 'sg_asset_type'/'Asset' at all, so the fallback set above is kept.
         fields.update(self._app.context.as_template_fields(render_template))
 
         # generate the render path:
@@ -1694,7 +1730,7 @@ class TankWriteNodeHandler(object):
         try:
             path = render_template.apply_fields(fields)
         except TankError as e:
-            raise TkComputePathError(str(e))
+            raise TankError(str(e))
 
         # make slahes uniform:
         path = path.replace(os.path.sep, "/")
